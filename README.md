@@ -137,6 +137,15 @@ Use variants for common async flows:
 <NarrativeLoader loading={loading} variant="analysis" randomize />
 ```
 
+When `randomize` is used with `loop={false}`, the loader performs up to `messages.length - 1`
+random transitions and then stays on the last shown message.
+
+```tsx
+<NarrativeLoader loading={loading} messages={["A", "B", "C"]} randomize loop={false} />
+```
+
+This mode does not guarantee that every message appears exactly once.
+
 ---
 
 ## Text animations
@@ -221,6 +230,7 @@ This works well with responses like:
 - `pollInterval` controls how often the status endpoint is checked.
 - `getMessage` maps the response into the displayed loader text.
 - `stopWhen` stops polling once your job is complete.
+- Polling request failures switch the loader into `error` state with the request error text.
 
 ---
 

@@ -247,6 +247,39 @@ describe("useNarrativeLoader", () => {
     expect(global.fetch).toHaveBeenCalledTimes(1);
   });
 
+  it("surfaces polling failures as error state and stops polling", async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 503,
+      json: async () => ({}),
+    } as Response);
+
+    const { result } = renderHook(() =>
+      useNarrativeLoader({
+        loading: true,
+        source: "/api/status",
+        pollInterval: 100,
+      })
+    );
+
+    act(() => {
+      vi.runOnlyPendingTimers();
+    });
+
+    await act(async () => {
+      await flushMicrotasks();
+    });
+
+    expect(result.current.status).toBe("error");
+    expect(result.current.text).toContain("Status request failed with 503");
+
+    act(() => {
+      vi.advanceTimersByTime(1000);
+    });
+
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+  });
+
   it("honors loop=false when randomize is enabled", () => {
     const randomValues = [0.9, 0.1, 0.9, 0.1, 0.9, 0.1];
     let randomIndex = 0;

@@ -44,6 +44,7 @@ export function useNarrativeLoader({
   const [status, setStatus] = useState<NarrativeLoaderStatus>("idle");
   const [index, setIndex] = useState(0);
   const [backendMessage, setBackendMessage] = useState<string | null>(null);
+  const [sourceError, setSourceError] = useState<string | null>(null);
   const [timelineReady, setTimelineReady] = useState(true);
   const randomStepsRef = useRef(0);
   const visibleSinceRef = useRef<number | null>(null);
@@ -68,7 +69,7 @@ export function useNarrativeLoader({
   }, [messages, timeline]);
 
   useEffect(() => {
-    const hasError = Boolean(error);
+    const hasError = Boolean(error || sourceError);
 
     if (hasError) {
       setStatus("error");
@@ -97,6 +98,7 @@ export function useNarrativeLoader({
       setStatus("idle");
       setIndex(0);
       setBackendMessage(null);
+      setSourceError(null);
       setTimelineReady(true);
       randomStepsRef.current = 0;
       visibleSinceRef.current = null;
@@ -116,6 +118,7 @@ export function useNarrativeLoader({
           setStatus("idle");
           setIndex(0);
           setBackendMessage(null);
+          setSourceError(null);
           setTimelineReady(true);
           randomStepsRef.current = 0;
           visibleSinceRef.current = null;
@@ -133,6 +136,7 @@ export function useNarrativeLoader({
       setStatus("idle");
       setIndex(0);
       setBackendMessage(null);
+      setSourceError(null);
       setTimelineReady(true);
       randomStepsRef.current = 0;
       visibleSinceRef.current = null;
@@ -220,7 +224,18 @@ export function useNarrativeLoader({
         if (stopWhenRef.current?.(data)) stopped = true;
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") return;
-        if (!cancelled) setBackendMessage("Still working on it");
+        if (!cancelled) {
+          const message =
+            error instanceof Error && error.message
+              ? error.message
+              : "Status polling failed";
+
+          setBackendMessage(null);
+          setSourceError(message);
+          setStatus("error");
+        }
+
+        stopped = true;
       } finally {
         inFlight = false;
         activeController = null;
@@ -240,7 +255,7 @@ export function useNarrativeLoader({
     };
   }, [isVisible, status, source, interval, pollInterval]);
 
-  const errorText = getErrorText(error);
+  const errorText = getErrorText(error) ?? sourceError;
   const current =
     sortedTimeline && !timelineReady
       ? FALLBACK_MESSAGE
