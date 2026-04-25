@@ -207,7 +207,7 @@ describe("NarrativeLoader", () => {
       await Promise.resolve();
     });
 
-    expect(screen.getByText("Backend step")).toBeInTheDocument();
+    expect(screen.getByText(/Backend step/)).toBeInTheDocument();
   });
 
   it("uses custom typewriter timing", async () => {

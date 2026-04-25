@@ -109,7 +109,13 @@ export function NarrativeLoader({
   const showEmoji = useEmojis && Boolean(loader.message.emoji);
 
   return (
-    <div className={`nl-root nl-status-${loader.status} ${className}`} aria-live="polite" aria-busy={loader.status === "loading"}>
+    <div
+      className={`nl-root nl-status-${loader.status} ${className}`}
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
+      aria-busy={loader.status === "loading"}
+    >
       <span
         key={`${loader.status}-${loader.text}-${loader.animation}-${loader.index}`}
         className={`nl-line ${lineAnimationClassNames[loader.animation]} ${textClassName}`.trim()}

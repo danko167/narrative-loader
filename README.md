@@ -238,6 +238,30 @@ When `loading` changes from `true` to `false` and `doneMessage` is provided, the
 />
 ```
 
+For authenticated or non-GET status checks:
+
+```tsx
+<NarrativeLoader
+  loading={loading}
+  source="/api/jobs/123/status"
+  sourceRequestInit={{
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ jobId: "123" }),
+  }}
+/>
+```
+
+If you already use a fetch wrapper, inject it:
+
+```tsx
+<NarrativeLoader
+  loading={loading}
+  source="/api/jobs/123/status"
+  fetcher={(input, init) => apiClient.fetch(input, init)}
+/>
+```
+
 This works well with responses like:
 
 ```json
@@ -260,8 +284,11 @@ and then to the default text.
 ```
 
 - `pollInterval` controls how often the status endpoint is checked.
+- `sourceRequestInit` lets you pass request options (method, headers, body, etc.).
+- `fetcher` lets you provide a custom fetch implementation.
 - `getMessage` maps the response into the displayed loader text.
 - Until the first polling response arrives, the loader keeps showing your configured preset, custom message, or timeline text.
+- While `source` polling is active, message-level animation metadata is preserved from your current message/timeline step.
 - `stopWhen` completes the loader cycle once your job is complete. Pair it with `doneMessage` if you want a final success message before the loader hides.
 - After a source-driven cycle completes, the loader stays idle for that same `source` until you either set `loading={false}` or provide a new `source` value.
 - Polling request failures switch the loader into `error` state with the request error text.

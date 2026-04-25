@@ -62,6 +62,16 @@ export type UseNarrativeLoaderOptions = {
   timeline?: LoaderTimelineItem[];
   source?: string;
   /**
+   * Optional custom fetch implementation used for source polling.
+   * Useful for auth wrappers or non-global fetch runtimes.
+   */
+  fetcher?: (input: string, init?: RequestInit) => Promise<Response>;
+  /**
+   * Optional RequestInit applied to polling requests.
+   * The `signal` property is intentionally omitted because polling cancellation is managed internally.
+   */
+  sourceRequestInit?: Omit<RequestInit, "signal">;
+  /**
    * Maps polling response data into a user-facing loader message.
    * Return a non-empty string to override the response message.
    * Return null/undefined/empty string to fall back to response.message or the default text.

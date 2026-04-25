@@ -31,6 +31,8 @@ export function useNarrativeLoader({
   tone = "neutral",
   timeline,
   source,
+  fetcher,
+  sourceRequestInit,
   getMessage,
   pollInterval,
   onStatusChange,
@@ -60,6 +62,8 @@ export function useNarrativeLoader({
   const onStatusChangeRef = useRef(onStatusChange);
   const stopWhenRef = useRef(stopWhen);
   const sourceRef = useRef(source);
+  const fetcherRef = useRef(fetcher);
+  const sourceRequestInitRef = useRef(sourceRequestInit);
 
   function resetLoaderState({ preserveSourceDone = false }: { preserveSourceDone?: boolean } = {}) {
     setIndex(0);
@@ -75,7 +79,9 @@ export function useNarrativeLoader({
     getMessageRef.current = getMessage;
     onStatusChangeRef.current = onStatusChange;
     stopWhenRef.current = stopWhen;
-  }, [getMessage, onStatusChange, stopWhen]);
+    fetcherRef.current = fetcher;
+    sourceRequestInitRef.current = sourceRequestInit;
+  }, [getMessage, onStatusChange, stopWhen, fetcher, sourceRequestInit]);
 
   useEffect(() => {
     if (sourceRef.current === source) return;
@@ -232,7 +238,11 @@ export function useNarrativeLoader({
       activeController = controller;
 
       try {
-        const response = await fetch(sourceUrl, { signal: controller.signal });
+        const runFetch = fetcherRef.current ?? fetch;
+        const response = await runFetch(sourceUrl, {
+          ...sourceRequestInitRef.current,
+          signal: controller.signal,
+        });
         if (!response.ok) throw new Error(`Status request failed with ${response.status}`);
 
         const data = await response.json();
@@ -306,7 +316,7 @@ export function useNarrativeLoader({
     status,
     text,
     message: displayed,
-    animation: isSourceMessage ? animation : displayed.animation ?? animation,
+    animation: displayed.animation ?? animation,
     emojiAnimation: displayed.emojiAnimation ?? emojiAnimation,
     index,
     isSourceMessage,

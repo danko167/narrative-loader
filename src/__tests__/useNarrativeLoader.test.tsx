@@ -353,6 +353,71 @@ describe("useNarrativeLoader", () => {
     expect(result.current.message.emoji).toBe("🔄");
   });
 
+  it("preserves message-level text animation during source-driven loading", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ message: "Backend step" }),
+    } as Response);
+
+    const { result } = renderHook(() =>
+      useNarrativeLoader({
+        loading: true,
+        source: "/api/status",
+        animation: "typewriter",
+        messages: [{ text: "Queued", animation: "dots" }],
+      })
+    );
+
+    act(() => {
+      vi.runOnlyPendingTimers();
+    });
+
+    await act(async () => {
+      await flushMicrotasks();
+    });
+
+    expect(result.current.text).toBe("Backend step");
+    expect(result.current.animation).toBe("dots");
+  });
+
+  it("uses fetcher and sourceRequestInit for polling requests", async () => {
+    const fetcher = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ message: "Authorized" }),
+    } as Response);
+
+    const { result } = renderHook(() =>
+      useNarrativeLoader({
+        loading: true,
+        source: "/api/status",
+        fetcher,
+        sourceRequestInit: {
+          method: "POST",
+          headers: { Authorization: "Bearer test-token" },
+          body: JSON.stringify({ jobId: "123" }),
+        },
+      })
+    );
+
+    act(() => {
+      vi.runOnlyPendingTimers();
+    });
+
+    await act(async () => {
+      await flushMicrotasks();
+    });
+
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    expect(fetcher).toHaveBeenCalledWith(
+      "/api/status",
+      expect.objectContaining({
+        method: "POST",
+        headers: { Authorization: "Bearer test-token" },
+      })
+    );
+    expect(result.current.text).toBe("Authorized");
+  });
+
   it("can restart polling after a source-driven completion without toggling loading off first", async () => {
     const responses = [
       { done: true, message: "First complete" },
