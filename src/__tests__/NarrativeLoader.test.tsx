@@ -160,7 +160,7 @@ describe("NarrativeLoader", () => {
   it("renders source-driven backend messages", async () => {
     vi.useFakeTimers();
 
-    global.fetch = vi.fn().mockResolvedValue({
+    globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({ message: "Backend step" }),
     } as Response);
@@ -183,5 +183,34 @@ describe("NarrativeLoader", () => {
     });
 
     expect(screen.getByText("Backend step")).toBeInTheDocument();
+  });
+
+  it("uses custom typewriter timing", async () => {
+    vi.useFakeTimers();
+
+    render(
+      <NarrativeLoader
+        loading
+        delay={0}
+        typewriterInterval={10}
+        messages={[{ text: "Test", animation: "typewriter" }]}
+      />
+    );
+
+    await act(async () => {
+      vi.advanceTimersByTime(0);
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(10);
+    });
+
+    expect(screen.getByText("T")).toBeInTheDocument();
+
+    await act(async () => {
+      vi.advanceTimersByTime(30);
+    });
+
+    expect(screen.getByText("Test")).toBeInTheDocument();
   });
 });

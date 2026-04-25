@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
 import { useNarrativeLoader } from "./useNarrativeLoader";
 import type { EmojiAnimation, LoaderAnimation, NarrativeLoaderProps } from "./types";
+import { emojiAnimationClassNames, lineAnimationClassNames } from "./utils";
+
+const DEFAULT_TYPEWRITER_INTERVAL = 35;
+const DEFAULT_DOTS_INTERVAL = 450;
 
 function usePrefersReducedMotion() {
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
@@ -25,7 +29,7 @@ function usePrefersReducedMotion() {
   return prefersReducedMotion;
 }
 
-function TypewriterText({ text }: { text: string }) {
+function TypewriterText({ text, interval }: { text: string; interval: number }) {
   const [visibleText, setVisibleText] = useState("");
 
   useEffect(() => {
@@ -36,24 +40,24 @@ function TypewriterText({ text }: { text: string }) {
       index += 1;
       setVisibleText(text.slice(0, index));
       if (index >= text.length) window.clearInterval(timer);
-    }, 35);
+    }, interval);
 
     return () => window.clearInterval(timer);
-  }, [text]);
+  }, [text, interval]);
 
   return <>{visibleText}</>;
 }
 
-function DotsText({ text }: { text: string }) {
+function DotsText({ text, interval }: { text: string; interval: number }) {
   const [dots, setDots] = useState(".");
 
   useEffect(() => {
     const timer = window.setInterval(() => {
       setDots((current) => (current === "." ? ".." : current === ".." ? "..." : "."));
-    }, 450);
+    }, interval);
 
     return () => window.clearInterval(timer);
-  }, []);
+  }, [interval]);
 
   return <>{text}{dots}</>;
 }
@@ -62,7 +66,7 @@ function AnimatedEmoji({ emoji, animation, className }: { emoji: string; animati
   if (!emoji) return null;
 
   return (
-    <span className={`nl-emoji nl-emoji-${animation} ${className ?? ""}`} aria-hidden="true">
+    <span className={`nl-emoji ${emojiAnimationClassNames[animation]} ${className ?? ""}`.trim()} aria-hidden="true">
       {emoji}
     </span>
   );
@@ -72,20 +76,26 @@ function RenderAnimatedText({
   text,
   animation,
   prefersReducedMotion,
+  typewriterInterval,
+  dotsInterval,
 }: {
   text: string;
   animation: LoaderAnimation;
   prefersReducedMotion: boolean;
+  typewriterInterval: number;
+  dotsInterval: number;
 }) {
   if (prefersReducedMotion) return <>{text}</>;
-  if (animation === "typewriter") return <TypewriterText text={text} />;
-  if (animation === "dots") return <DotsText text={text} />;
+  if (animation === "typewriter") return <TypewriterText text={text} interval={typewriterInterval} />;
+  if (animation === "dots") return <DotsText text={text} interval={dotsInterval} />;
   return <>{text}</>;
 }
 
 export function NarrativeLoader({
   useEmojis = false,
   emojiPosition = "end",
+  typewriterInterval = DEFAULT_TYPEWRITER_INTERVAL,
+  dotsInterval = DEFAULT_DOTS_INTERVAL,
   className = "",
   textClassName = "",
   emojiClassName = "",
@@ -103,7 +113,10 @@ export function NarrativeLoader({
 
   return (
     <div className={`nl-root nl-status-${loader.status} ${className}`} aria-live="polite" aria-busy={loader.status === "loading"}>
-      <span key={`${loader.status}-${loader.text}-${loader.animation}-${loader.index}`} className={`nl-line nl-${loader.animation} ${textClassName}`}>
+      <span
+        key={`${loader.status}-${loader.text}-${loader.animation}-${loader.index}`}
+        className={`nl-line ${lineAnimationClassNames[loader.animation]} ${textClassName}`.trim()}
+      >
         {showEmoji && emojiPosition === "start" ? (
           <AnimatedEmoji emoji={loader.message.emoji} animation={loader.emojiAnimation} className={emojiClassName} />
         ) : null}
@@ -113,6 +126,8 @@ export function NarrativeLoader({
             text={loader.text}
             animation={loader.animation}
             prefersReducedMotion={prefersReducedMotion}
+            typewriterInterval={typewriterInterval}
+            dotsInterval={dotsInterval}
           />
         </span>
 

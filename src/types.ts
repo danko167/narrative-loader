@@ -1,17 +1,20 @@
-export type LoaderVariant =
-  | "default"
-  | "chat"
-  | "save"
-  | "upload"
-  | "search"
-  | "delete"
-  | "analysis";
+export const LOADER_VARIANTS = ["default", "chat", "save", "upload", "search", "delete", "analysis"] as const;
 
-export type LoaderTone = "neutral" | "friendly" | "playful" | "professional";
+export type LoaderVariant = (typeof LOADER_VARIANTS)[number];
 
-export type LoaderAnimation = "fade" | "typewriter" | "dots" | "none";
+export const LOADER_TONES = ["neutral", "friendly", "playful", "professional"] as const;
 
-export type EmojiAnimation = "none" | "pulse" | "spin" | "flip" | "bounce";
+export type LoaderTone = (typeof LOADER_TONES)[number];
+
+export const LOADER_ANIMATIONS = ["fade", "typewriter", "dots", "none"] as const;
+
+export type LoaderAnimation = (typeof LOADER_ANIMATIONS)[number];
+
+export const EMOJI_ANIMATIONS = ["none", "pulse", "spin", "flip", "bounce"] as const;
+
+export type EmojiAnimation = (typeof EMOJI_ANIMATIONS)[number];
+
+export const EMOJI_POSITIONS = ["start", "end"] as const;
 
 export type LoaderMessage =
   | string
@@ -58,7 +61,12 @@ export type UseNarrativeLoaderOptions = {
   tone?: LoaderTone;
   timeline?: LoaderTimelineItem[];
   source?: string;
-  getMessage?: (data: unknown) => string;
+  /**
+   * Maps polling response data into a user-facing loader message.
+   * Return a non-empty string to override the response message.
+   * Return null/undefined/empty string to fall back to response.message or the default text.
+   */
+  getMessage?: (data: unknown) => string | null | undefined;
   pollInterval?: number;
   onStatusChange?: (data: unknown) => void;
   stopWhen?: (data: unknown) => boolean;
@@ -88,7 +96,9 @@ export type UseNarrativeLoaderResult = {
 
 export type NarrativeLoaderProps = UseNarrativeLoaderOptions & {
   useEmojis?: boolean;
-  emojiPosition?: "start" | "end";
+  emojiPosition?: (typeof EMOJI_POSITIONS)[number];
+  typewriterInterval?: number;
+  dotsInterval?: number;
   className?: string;
   textClassName?: string;
   emojiClassName?: string;

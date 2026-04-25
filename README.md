@@ -146,6 +146,8 @@ random transitions and then stays on the last shown message.
 
 This mode does not guarantee that every message appears exactly once.
 
+For large message arrays, prefer `loop={false}` or a `timeline` when you want bounded transitions.
+
 ---
 
 ## Text animations
@@ -155,6 +157,17 @@ This mode does not guarantee that every message appears exactly once.
 <NarrativeLoader loading={loading} animation="dots" />
 <NarrativeLoader loading={loading} animation="fade" />
 <NarrativeLoader loading={loading} animation="none" />
+```
+
+You can also tune text animation timing in the wrapper component:
+
+```tsx
+<NarrativeLoader
+  loading={loading}
+  animation="typewriter"
+  typewriterInterval={20}
+  dotsInterval={300}
+/>
 ```
 
 ---
@@ -207,6 +220,9 @@ timeline={[
 <NarrativeLoader loading={loading} error errorMessage="Something went wrong" />
 ```
 
+When `loading` changes from `true` to `false` and `doneMessage` is provided, the loader enters
+`done` state briefly before hiding. Control the visibility window with `doneDuration`.
+
 ---
 
 ## Backend polling
@@ -227,10 +243,27 @@ This works well with responses like:
 { "step": "Generating summary", "done": false }
 ```
 
+`getMessage` should return a non-empty string when you want to override the displayed polling text.
+If it returns `null`, `undefined`, or an empty string, the loader falls back to `response.message`
+and then to the default text.
+
+```tsx
+<NarrativeLoader
+  loading={loading}
+  source="/api/jobs/123/status"
+  getMessage={(data) => {
+    const step = (data as { step?: string }).step;
+    return step ? `Step: ${step}` : undefined;
+  }}
+/>
+```
+
 - `pollInterval` controls how often the status endpoint is checked.
 - `getMessage` maps the response into the displayed loader text.
 - `stopWhen` stops polling once your job is complete.
 - Polling request failures switch the loader into `error` state with the request error text.
+- Polling is sequential: a new request is only scheduled after the previous request settles.
+- Retries and backoff are left to the consumer so backend failures are not hidden automatically.
 
 ---
 

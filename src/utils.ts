@@ -1,10 +1,27 @@
 import type {
+  EmojiAnimation,
+  LoaderAnimation,
   LoaderMessage,
   LoaderTimelineItem,
   LoaderTimelineMessageItem,
   NarrativeLoaderProps,
   NormalizedMessage,
 } from "./types";
+
+export const lineAnimationClassNames: Record<LoaderAnimation, string> = {
+  fade: "nl-fade",
+  typewriter: "nl-typewriter",
+  dots: "nl-dots",
+  none: "nl-none",
+};
+
+export const emojiAnimationClassNames: Record<EmojiAnimation, string> = {
+  none: "nl-emoji-none",
+  pulse: "nl-emoji-pulse",
+  spin: "nl-emoji-spin",
+  flip: "nl-emoji-flip",
+  bounce: "nl-emoji-bounce",
+};
 
 export function normalizeMessage(message: LoaderMessage): NormalizedMessage {
   if (typeof message === "string") {
@@ -21,10 +38,36 @@ export function normalizeMessage(message: LoaderMessage): NormalizedMessage {
 }
 
 export function getErrorText(error: NarrativeLoaderProps["error"]): string | null {
-  if (!error) return null;
+  if (!isValidErrorValue(error)) return null;
+  if (error === true) return null;
   if (typeof error === "string") return error;
   if (error instanceof Error) return error.message;
   return null;
+}
+
+export function isValidErrorValue(error: NarrativeLoaderProps["error"]): error is true | string | Error {
+  return error === true || typeof error === "string" || error instanceof Error;
+}
+
+export function resolveSourceMessage(
+  data: unknown,
+  getMessage?: (data: unknown) => string | null | undefined
+): string {
+  const customMessage = getMessage?.(data)?.trim();
+
+  if (customMessage) return customMessage;
+
+  if (
+    typeof data === "object" &&
+    data !== null &&
+    "message" in data &&
+    typeof (data as { message: unknown }).message === "string"
+  ) {
+    const fallbackMessage = (data as { message: string }).message.trim();
+    if (fallbackMessage) return fallbackMessage;
+  }
+
+  return "Working on it";
 }
 
 export function getRandomNextIndex(current: number, length: number) {

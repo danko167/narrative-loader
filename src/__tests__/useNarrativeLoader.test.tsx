@@ -161,10 +161,26 @@ describe("useNarrativeLoader", () => {
     expect(result.current.text).toBe("Request failed");
   });
 
+  it("ignores invalid runtime error values", () => {
+    const { result } = renderHook(() =>
+      useNarrativeLoader({
+        loading: true,
+        error: { message: "Not a real error" } as unknown as Error,
+      })
+    );
+
+    act(() => {
+      vi.runOnlyPendingTimers();
+    });
+
+    expect(result.current.status).toBe("loading");
+    expect(result.current.text).toBe("Thinking");
+  });
+
   it("polls sequentially without overlapping requests", async () => {
     const pendingResolvers: Array<(value: Response) => void> = [];
 
-    global.fetch = vi.fn().mockImplementation(
+    globalThis.fetch = vi.fn().mockImplementation(
       () =>
         new Promise<Response>((resolve) => {
           pendingResolvers.push(resolve);
@@ -183,13 +199,13 @@ describe("useNarrativeLoader", () => {
       vi.runOnlyPendingTimers();
     });
 
-    expect(global.fetch).toHaveBeenCalledTimes(1);
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
 
     act(() => {
       vi.advanceTimersByTime(500);
     });
 
-    expect(global.fetch).toHaveBeenCalledTimes(1);
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
 
     await act(async () => {
       pendingResolvers[0]({
@@ -203,12 +219,12 @@ describe("useNarrativeLoader", () => {
       vi.advanceTimersByTime(100);
     });
 
-    expect(global.fetch).toHaveBeenCalledTimes(2);
+    expect(globalThis.fetch).toHaveBeenCalledTimes(2);
   });
 
   it("stops polling when stopWhen returns true", async () => {
     const pendingResolvers: Array<(value: Response) => void> = [];
-    global.fetch = vi.fn().mockImplementation(
+    globalThis.fetch = vi.fn().mockImplementation(
       () =>
         new Promise<Response>((resolve) => {
           pendingResolvers.push(resolve);
@@ -228,7 +244,7 @@ describe("useNarrativeLoader", () => {
       vi.runOnlyPendingTimers();
     });
 
-    expect(global.fetch).toHaveBeenCalledTimes(1);
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
 
     await act(async () => {
       pendingResolvers[0]({
@@ -238,17 +254,17 @@ describe("useNarrativeLoader", () => {
       await flushMicrotasks();
     });
 
-    expect(global.fetch).toHaveBeenCalledTimes(1);
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
 
     act(() => {
       vi.advanceTimersByTime(1000);
     });
 
-    expect(global.fetch).toHaveBeenCalledTimes(1);
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
   });
 
   it("surfaces polling failures as error state and stops polling", async () => {
-    global.fetch = vi.fn().mockResolvedValue({
+    globalThis.fetch = vi.fn().mockResolvedValue({
       ok: false,
       status: 503,
       json: async () => ({}),
@@ -277,7 +293,32 @@ describe("useNarrativeLoader", () => {
       vi.advanceTimersByTime(1000);
     });
 
-    expect(global.fetch).toHaveBeenCalledTimes(1);
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("falls back to response.message when getMessage returns an empty value", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ message: "Response message" }),
+    } as Response);
+
+    const { result } = renderHook(() =>
+      useNarrativeLoader({
+        loading: true,
+        source: "/api/status",
+        getMessage: () => "",
+      })
+    );
+
+    act(() => {
+      vi.runOnlyPendingTimers();
+    });
+
+    await act(async () => {
+      await flushMicrotasks();
+    });
+
+    expect(result.current.text).toBe("Response message");
   });
 
   it("honors loop=false when randomize is enabled", () => {

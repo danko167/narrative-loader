@@ -6,7 +6,14 @@ import type {
   UseNarrativeLoaderResult,
   NarrativeLoaderStatus,
 } from "./types";
-import { getErrorText, getRandomNextIndex, normalizeMessage, normalizeTimelineItem } from "./utils";
+import {
+  getErrorText,
+  getRandomNextIndex,
+  isValidErrorValue,
+  normalizeMessage,
+  normalizeTimelineItem,
+  resolveSourceMessage,
+} from "./utils";
 
 const DEFAULT_ERROR_MESSAGE = {
   text: "Something went wrong",
@@ -69,7 +76,7 @@ export function useNarrativeLoader({
   }, [messages, timeline]);
 
   useEffect(() => {
-    const hasError = Boolean(error || sourceError);
+    const hasError = isValidErrorValue(error) || Boolean(sourceError);
 
     if (hasError) {
       setStatus("error");
@@ -160,6 +167,8 @@ export function useNarrativeLoader({
             randomStepsRef.current += 1;
           }
 
+          // `randomize + loop=false` intentionally limits the number of random transitions
+          // instead of trying to exhaust the message list exactly once.
           return getRandomNextIndex(current, activeMessages.length);
         }
 
@@ -211,14 +220,7 @@ export function useNarrativeLoader({
         const data = await response.json();
         onStatusChangeRef.current?.(data);
 
-        const message =
-          getMessageRef.current?.(data) ??
-          (typeof data === "object" &&
-          data !== null &&
-          "message" in data &&
-          typeof (data as { message: unknown }).message === "string"
-            ? (data as { message: string }).message
-            : "Working on it");
+        const message = resolveSourceMessage(data, getMessageRef.current);
 
         if (!cancelled) setBackendMessage(message);
         if (stopWhenRef.current?.(data)) stopped = true;
