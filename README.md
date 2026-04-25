@@ -288,12 +288,13 @@ and then to the default text.
 - `fetcher` lets you provide a custom fetch implementation.
 - `getMessage` maps the response into the displayed loader text.
 - Until the first polling response arrives, the loader keeps showing your configured preset, custom message, or timeline text.
+- Polling starts as soon as `loading` enters `true` (it is not delayed by the visual `delay` prop).
 - While `source` polling is active, message-level animation metadata is preserved from your current message/timeline step.
 - `stopWhen` completes the loader cycle once your job is complete. Pair it with `doneMessage` if you want a final success message before the loader hides.
 - After a source-driven cycle completes, the loader stays idle for that same `source` until you either set `loading={false}` or provide a new `source` value.
-- Polling request failures switch the loader into `error` state with the request error text.
+- Polling request failures are retried automatically with bounded retries and backoff.
+- After repeated polling failures, the loader switches into `error` state with the request error text.
 - Polling is sequential: a new request is only scheduled after the previous request settles.
-- Retries and backoff are left to the consumer so backend failures are not hidden automatically.
 
 ---
 
