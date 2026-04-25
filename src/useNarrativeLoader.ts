@@ -23,6 +23,8 @@ const DEFAULT_ERROR_MESSAGE = {
   emojiAnimation: "bounce" as const,
 };
 
+const SOURCE_POLLING_MAX_RETRIES = 3;
+
 const FALLBACK_MESSAGE = normalizeMessage("Working on it");
 
 export function useNarrativeLoader({
@@ -228,13 +230,14 @@ export function useNarrativeLoader({
   }, [isVisible, status, sortedTimeline]);
 
   useEffect(() => {
-    if (!isVisible || status !== "loading" || !source) return;
+    if (status !== "loading" || !source) return;
 
     let cancelled = false;
     let stopped = false;
     let inFlight = false;
     let timer: number | null = null;
     let activeController: AbortController | null = null;
+    let consecutiveFailures = 0;
     const sourceUrl = source;
     const effectivePollInterval = pollInterval ?? interval;
 
@@ -258,8 +261,12 @@ export function useNarrativeLoader({
 
         const message = resolveSourceMessage(data, getMessageRef.current);
         const shouldStop = stopWhenRef.current?.(data) ?? false;
+        consecutiveFailures = 0;
 
-        if (!cancelled) setBackendMessage(message);
+        if (!cancelled) {
+          setBackendMessage(message);
+          setSourceError(null);
+        }
         if (shouldStop) {
           stopped = true;
 
@@ -270,24 +277,33 @@ export function useNarrativeLoader({
         }
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") return;
+        consecutiveFailures += 1;
+
         if (!cancelled) {
           const message =
             error instanceof Error && error.message
               ? error.message
               : "Status polling failed";
 
-          setBackendMessage(null);
-          setSourceError(message);
-          setStatus("error");
+          if (consecutiveFailures >= SOURCE_POLLING_MAX_RETRIES) {
+            setBackendMessage(null);
+            setSourceError(message);
+            setStatus("error");
+            stopped = true;
+          } else {
+            setBackendMessage((current) => current ?? "Still working on it");
+          }
         }
-
-        stopped = true;
       } finally {
         inFlight = false;
         activeController = null;
 
         if (!cancelled && !stopped) {
-          timer = window.setTimeout(tick, effectivePollInterval);
+          const retryDelay =
+            consecutiveFailures > 0
+              ? Math.min(effectivePollInterval * 2 ** (consecutiveFailures - 1), effectivePollInterval * 4)
+              : effectivePollInterval;
+          timer = window.setTimeout(tick, retryDelay);
         }
       }
     }
@@ -299,7 +315,7 @@ export function useNarrativeLoader({
       if (timer !== null) window.clearTimeout(timer);
       if (activeController) activeController.abort();
     };
-  }, [isVisible, status, source, interval, pollInterval]);
+  }, [status, source, interval, pollInterval]);
 
   const errorText = getErrorText(error) ?? sourceError;
   const current =

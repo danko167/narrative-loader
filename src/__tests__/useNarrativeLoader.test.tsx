@@ -304,22 +304,59 @@ describe("useNarrativeLoader", () => {
       })
     );
 
-    act(() => {
-      vi.runOnlyPendingTimers();
+    await act(async () => {
+      vi.advanceTimersByTime(0);
+      await flushMicrotasks();
     });
 
     await act(async () => {
+      vi.advanceTimersByTime(100);
+      await flushMicrotasks();
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(200);
       await flushMicrotasks();
     });
 
     expect(result.current.status).toBe("error");
     expect(result.current.text).toContain("Status request failed with 503");
+    expect(globalThis.fetch).toHaveBeenCalledTimes(3);
 
     act(() => {
       vi.advanceTimersByTime(1000);
     });
 
-    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+    expect(globalThis.fetch).toHaveBeenCalledTimes(3);
+  });
+
+  it("retries transient polling failures and recovers without entering error", async () => {
+    globalThis.fetch = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: false, status: 503, json: async () => ({}) } as Response)
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ message: "Recovered" }) } as Response);
+
+    const { result } = renderHook(() =>
+      useNarrativeLoader({
+        loading: true,
+        source: "/api/status",
+        pollInterval: 100,
+      })
+    );
+
+    await act(async () => {
+      vi.advanceTimersByTime(0);
+      await flushMicrotasks();
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(100);
+      await flushMicrotasks();
+    });
+
+    expect(result.current.status).toBe("loading");
+    expect(result.current.text).toBe("Recovered");
+    expect(globalThis.fetch).toHaveBeenCalledTimes(2);
   });
 
   it("clears source polling errors when loading is turned off", async () => {
@@ -341,11 +378,18 @@ describe("useNarrativeLoader", () => {
       }
     );
 
-    act(() => {
-      vi.runOnlyPendingTimers();
+    await act(async () => {
+      vi.advanceTimersByTime(0);
+      await flushMicrotasks();
     });
 
     await act(async () => {
+      vi.advanceTimersByTime(100);
+      await flushMicrotasks();
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(200);
       await flushMicrotasks();
     });
 
@@ -620,6 +664,22 @@ describe("useNarrativeLoader", () => {
 
     expect(result.current.status).toBe("loading");
     expect(result.current.text).toBe("Custom pending text");
+  });
+
+  it("starts source polling immediately even when delay is configured", () => {
+    globalThis.fetch = vi.fn().mockImplementation(
+      () => new Promise<Response>(() => undefined)
+    );
+
+    renderHook(() =>
+      useNarrativeLoader({
+        loading: true,
+        source: "/api/status",
+        delay: 2000,
+      })
+    );
+
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
   });
 
   it("honors loop=false when randomize is enabled", () => {
