@@ -65,6 +65,31 @@ describe("NarrativeLoader", () => {
     window.matchMedia = originalMatchMedia;
   });
 
+  it("keeps configured emojis visible during source-driven loading", async () => {
+    vi.useFakeTimers();
+
+    globalThis.fetch = vi.fn().mockImplementation(
+      () => new Promise<Response>(() => undefined)
+    );
+
+    render(
+      <NarrativeLoader
+        loading
+        delay={0}
+        source="/api/status"
+        useEmojis
+        messages={[{ text: "Fetching status", emoji: "🔄" }]}
+      />
+    );
+
+    await act(async () => {
+      vi.runOnlyPendingTimers();
+    });
+
+    expect(screen.getByText("Fetching status")).toBeInTheDocument();
+    expect(screen.getByText("🔄")).toBeInTheDocument();
+  });
+
   it("shows done message after loading completes", async () => {
     vi.useFakeTimers();
 

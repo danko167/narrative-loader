@@ -51,6 +51,7 @@ export function useNarrativeLoader({
   const [status, setStatus] = useState<NarrativeLoaderStatus>("idle");
   const [index, setIndex] = useState(0);
   const [backendMessage, setBackendMessage] = useState<string | null>(null);
+  const [sourceDone, setSourceDone] = useState(false);
   const [sourceError, setSourceError] = useState<string | null>(null);
   const [timelineReady, setTimelineReady] = useState(true);
   const randomStepsRef = useRef(0);
@@ -77,6 +78,7 @@ export function useNarrativeLoader({
 
   useEffect(() => {
     const hasError = isValidErrorValue(error) || Boolean(sourceError);
+    const isActivelyLoading = loading && !sourceDone;
 
     if (hasError) {
       setStatus("error");
@@ -85,7 +87,7 @@ export function useNarrativeLoader({
       return;
     }
 
-    if (loading) {
+    if (isActivelyLoading) {
       setStatus("loading");
       randomStepsRef.current = 0;
 
@@ -101,10 +103,20 @@ export function useNarrativeLoader({
       return () => window.clearTimeout(timer);
     }
 
+    if (sourceDone && status !== "done") {
+      setStatus("done");
+    }
+
     if (!isVisible) {
+      if (loading && sourceDone) {
+        setStatus("idle");
+        return;
+      }
+
       setStatus("idle");
       setIndex(0);
       setBackendMessage(null);
+      setSourceDone(false);
       setSourceError(null);
       setTimelineReady(true);
       randomStepsRef.current = 0;
@@ -150,7 +162,7 @@ export function useNarrativeLoader({
     }, remainingVisible);
 
     return () => window.clearTimeout(timer);
-  }, [loading, error, delay, minVisibleDuration, doneMessage, doneDuration, isVisible, sortedTimeline]);
+  }, [loading, sourceDone, error, delay, minVisibleDuration, doneMessage, doneDuration, isVisible, sortedTimeline]);
 
   useEffect(() => {
     if (!isVisible || status !== "loading" || source || sortedTimeline) return;
@@ -221,9 +233,17 @@ export function useNarrativeLoader({
         onStatusChangeRef.current?.(data);
 
         const message = resolveSourceMessage(data, getMessageRef.current);
+        const shouldStop = stopWhenRef.current?.(data) ?? false;
 
         if (!cancelled) setBackendMessage(message);
-        if (stopWhenRef.current?.(data)) stopped = true;
+        if (shouldStop) {
+          stopped = true;
+
+          if (!cancelled) {
+            setStatus("done");
+            setSourceDone(true);
+          }
+        }
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") return;
         if (!cancelled) {
@@ -264,9 +284,15 @@ export function useNarrativeLoader({
       : sortedTimeline?.[index]?.message ?? activeMessages[index] ?? FALLBACK_MESSAGE;
   const done = doneMessage ? normalizeMessage(doneMessage) : null;
   const errorMsg = normalizeMessage(errorText ? { text: errorText, emoji: "⚠️", animation: "fade", emojiAnimation: "bounce" } : errorMessage);
-  const displayed = status === "done" && done ? done : status === "error" ? errorMsg : current;
+  const sourceDoneMessage = backendMessage ? { ...current, text: backendMessage } : current;
+  const displayed =
+    status === "done"
+      ? done ?? sourceDoneMessage
+      : status === "error"
+        ? errorMsg
+        : current;
   const isSourceMessage = Boolean(source && status === "loading");
-  const text = isSourceMessage ? backendMessage ?? "Starting" : displayed.text;
+  const text = isSourceMessage ? backendMessage ?? displayed.text : displayed.text;
 
   return {
     visible: isVisible && status !== "idle",

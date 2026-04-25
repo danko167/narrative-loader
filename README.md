@@ -232,6 +232,7 @@ When `loading` changes from `true` to `false` and `doneMessage` is provided, the
   loading={loading}
   source="/api/jobs/123/status"
   pollInterval={1500}
+  doneMessage="Summary ready"
   getMessage={(data) => data.step}
   stopWhen={(data) => data.done === true}
 />
@@ -260,7 +261,8 @@ and then to the default text.
 
 - `pollInterval` controls how often the status endpoint is checked.
 - `getMessage` maps the response into the displayed loader text.
-- `stopWhen` stops polling once your job is complete.
+- Until the first polling response arrives, the loader keeps showing your configured preset, custom message, or timeline text.
+- `stopWhen` completes the loader cycle once your job is complete. Pair it with `doneMessage` if you want a final success message before the loader hides.
 - Polling request failures switch the loader into `error` state with the request error text.
 - Polling is sequential: a new request is only scheduled after the previous request settles.
 - Retries and backoff are left to the consumer so backend failures are not hidden automatically.

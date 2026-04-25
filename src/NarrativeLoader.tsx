@@ -106,10 +106,7 @@ export function NarrativeLoader({
 
   if (!loader.visible) return null;
 
-  const showEmoji =
-    useEmojis &&
-    Boolean(loader.message.emoji) &&
-    !loader.isSourceMessage;
+  const showEmoji = useEmojis && Boolean(loader.message.emoji);
 
   return (
     <div className={`nl-root nl-status-${loader.status} ${className}`} aria-live="polite" aria-busy={loader.status === "loading"}>

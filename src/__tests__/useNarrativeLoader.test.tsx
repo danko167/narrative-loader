@@ -231,7 +231,7 @@ describe("useNarrativeLoader", () => {
         })
     );
 
-    renderHook(() =>
+    const { result } = renderHook(() =>
       useNarrativeLoader({
         loading: true,
         source: "/api/status",
@@ -254,12 +254,17 @@ describe("useNarrativeLoader", () => {
       await flushMicrotasks();
     });
 
+    expect(result.current.status).toBe("done");
+    expect(result.current.text).toBe("Complete");
     expect(globalThis.fetch).toHaveBeenCalledTimes(1);
 
-    act(() => {
-      vi.advanceTimersByTime(1000);
+    await act(async () => {
+      vi.advanceTimersByTime(0);
+      await flushMicrotasks();
     });
 
+    expect(result.current.status).toBe("idle");
+    expect(result.current.visible).toBe(false);
     expect(globalThis.fetch).toHaveBeenCalledTimes(1);
   });
 
@@ -319,6 +324,27 @@ describe("useNarrativeLoader", () => {
     });
 
     expect(result.current.text).toBe("Response message");
+  });
+
+  it("uses configured loader text before the first polling response arrives", () => {
+    globalThis.fetch = vi.fn().mockImplementation(
+      () => new Promise<Response>(() => undefined)
+    );
+
+    const { result } = renderHook(() =>
+      useNarrativeLoader({
+        loading: true,
+        source: "/api/status",
+        messages: ["Custom pending text"],
+      })
+    );
+
+    act(() => {
+      vi.runOnlyPendingTimers();
+    });
+
+    expect(result.current.status).toBe("loading");
+    expect(result.current.text).toBe("Custom pending text");
   });
 
   it("honors loop=false when randomize is enabled", () => {
