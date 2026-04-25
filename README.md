@@ -26,9 +26,11 @@ Designed for modern apps:
 - 🔀 Optional randomized message flow
 - ⏱ Delay + minimum visible duration (no flicker)
 - 📡 Backend-driven status polling
+- 🔁 Sequential polling with built-in bounded retry/backoff for transient failures
 - 🎬 Text + emoji animations
 - 🧩 Fully customizable messages
 - ♿ Respects reduced motion
+- ♿ Live-region friendly accessibility semantics
 
 ---
 
@@ -202,6 +204,9 @@ timeline={[
 ]}
 ```
 
+If the first timeline item starts after `after > 0`, the loader shows a fallback
+"Working on it" message until that first timeline item becomes active.
+
 ---
 
 ## Delay & duration
@@ -222,6 +227,12 @@ timeline={[
 
 When `loading` changes from `true` to `false` and `doneMessage` is provided, the loader enters
 `done` state briefly before hiding. Control the visibility window with `doneDuration`.
+
+Error behavior:
+
+- `error={true}` shows `errorMessage` as-is.
+- `error="..."` or `error={new Error("...")}` uses your runtime error text while preserving
+  emoji/animation styling from `errorMessage`.
 
 ---
 
@@ -291,8 +302,10 @@ and then to the default text.
 - Polling starts as soon as `loading` enters `true` (it is not delayed by the visual `delay` prop).
 - While `source` polling is active, message-level animation metadata is preserved from your current message/timeline step.
 - `stopWhen` completes the loader cycle once your job is complete. Pair it with `doneMessage` if you want a final success message before the loader hides.
+- If you do not provide `stopWhen`, polling continues while `loading` stays `true`.
 - After a source-driven cycle completes, the loader stays idle for that same `source` until you either set `loading={false}` or provide a new `source` value.
 - Polling request failures are retried automatically with bounded retries and backoff.
+- Retry policy: up to 3 consecutive failures total (initial failure + 2 retries), with delays based on `pollInterval` (`1x`, then `2x`, capped at `4x`).
 - After repeated polling failures, the loader switches into `error` state with the request error text.
 - Polling is sequential: a new request is only scheduled after the previous request settles.
 
@@ -320,6 +333,16 @@ return loader.visible ? (
 
 `loader.text` is the current display string. `loader.message` carries the same text plus any emoji or animation metadata for custom headless rendering.
 
+## Exports
+
+The package exports:
+
+- `NarrativeLoader`
+- `useNarrativeLoader`
+- `tonePresets`
+- `LOADER_VARIANTS`, `LOADER_TONES`, `LOADER_ANIMATIONS`
+- `EMOJI_ANIMATIONS`, `EMOJI_POSITIONS`
+
 ## Hook result API
 
 `useNarrativeLoader` returns an object with these fields:
@@ -332,6 +355,11 @@ return loader.visible ? (
 - `emojiAnimation`: The emoji animation that should be rendered for the current step.
 - `index`: The current message or timeline index.
 - `isSourceMessage`: `true` while the displayed text is being driven by `source` polling.
+
+## Accessibility
+
+- The wrapper uses `role="status"`, `aria-live="polite"`, `aria-atomic="true"`, and loading-aware `aria-busy`.
+- Animated punctuation/typewriter rendering is visual-only while a stable status string is preserved for assistive technologies.
 
 ---
 
