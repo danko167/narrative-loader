@@ -27,7 +27,11 @@ describe("useNarrativeLoader", () => {
     );
 
     act(() => {
-      vi.runOnlyPendingTimers();
+      vi.advanceTimersByTime(0);
+    });
+
+    act(() => {
+      vi.advanceTimersByTime(0);
     });
 
     expect(result.current.visible).toBe(true);
@@ -38,7 +42,11 @@ describe("useNarrativeLoader", () => {
     const { result } = renderHook(() => useNarrativeLoader({ loading: true }));
 
     act(() => {
-      vi.runOnlyPendingTimers();
+      vi.advanceTimersByTime(0);
+    });
+
+    act(() => {
+      vi.advanceTimersByTime(0);
     });
 
     expect(result.current.visible).toBe(true);
@@ -57,16 +65,47 @@ describe("useNarrativeLoader", () => {
     );
 
     act(() => {
-      vi.runOnlyPendingTimers();
+      vi.advanceTimersByTime(0);
+    });
+
+    act(() => {
+      vi.advanceTimersByTime(0);
     });
 
     expect(result.current.text).toBe("Start");
 
     act(() => {
-      vi.advanceTimersByTime(1000);
+      vi.advanceTimersByTime(1100);
     });
 
     expect(result.current.text).toBe("Later");
+  });
+
+  it("does not show first timeline message before its scheduled time", () => {
+    const { result } = renderHook(() =>
+      useNarrativeLoader({
+        loading: true,
+        timeline: [{ after: 500, message: "Delayed start" }],
+      })
+    );
+
+    act(() => {
+      vi.runOnlyPendingTimers();
+    });
+
+    expect(result.current.text).toBe("Working on it");
+
+    act(() => {
+      vi.advanceTimersByTime(499);
+    });
+
+    expect(result.current.text).toBe("Working on it");
+
+    act(() => {
+      vi.advanceTimersByTime(50);
+    });
+
+    expect(result.current.text).toBe("Delayed start");
   });
 
   it("supports shorthand timeline items", () => {
@@ -87,7 +126,7 @@ describe("useNarrativeLoader", () => {
     expect(result.current.text).toBe("Start");
 
     act(() => {
-      vi.advanceTimersByTime(1000);
+      vi.advanceTimersByTime(1100);
     });
 
     expect(result.current.text).toBe("Later");
@@ -206,5 +245,50 @@ describe("useNarrativeLoader", () => {
     });
 
     expect(global.fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("honors loop=false when randomize is enabled", () => {
+    const randomValues = [0.9, 0.1, 0.9, 0.1, 0.9, 0.1];
+    let randomIndex = 0;
+    const randomSpy = vi.spyOn(Math, "random").mockImplementation(() => {
+      const value = randomValues[randomIndex % randomValues.length];
+      randomIndex += 1;
+      return value;
+    });
+
+    const { result } = renderHook(() =>
+      useNarrativeLoader({
+        loading: true,
+        messages: ["A", "B", "C"],
+        randomize: true,
+        loop: false,
+        interval: 100,
+      })
+    );
+
+    act(() => {
+      vi.runOnlyPendingTimers();
+    });
+
+    expect(result.current.text).toBe("A");
+
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
+
+    expect(result.current.text).toBe("C");
+
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
+
+    expect(result.current.text).toBe("A");
+
+    act(() => {
+      vi.advanceTimersByTime(1000);
+    });
+
+    expect(result.current.text).toBe("A");
+    expect(randomSpy).toHaveBeenCalledTimes(2);
   });
 });

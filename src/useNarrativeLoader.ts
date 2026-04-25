@@ -44,6 +44,8 @@ export function useNarrativeLoader({
   const [status, setStatus] = useState<NarrativeLoaderStatus>("idle");
   const [index, setIndex] = useState(0);
   const [backendMessage, setBackendMessage] = useState<string | null>(null);
+  const [timelineReady, setTimelineReady] = useState(true);
+  const randomStepsRef = useRef(0);
   const visibleSinceRef = useRef<number | null>(null);
   const getMessageRef = useRef(getMessage);
   const onStatusChangeRef = useRef(onStatusChange);
@@ -77,8 +79,11 @@ export function useNarrativeLoader({
 
     if (loading) {
       setStatus("loading");
+      randomStepsRef.current = 0;
 
       if (isVisible) return;
+
+      setTimelineReady(!(sortedTimeline?.[0]?.after && sortedTimeline[0].after > 0));
 
       const timer = window.setTimeout(() => {
         setIsVisible(true);
@@ -92,6 +97,8 @@ export function useNarrativeLoader({
       setStatus("idle");
       setIndex(0);
       setBackendMessage(null);
+      setTimelineReady(true);
+      randomStepsRef.current = 0;
       visibleSinceRef.current = null;
       return;
     }
@@ -109,6 +116,8 @@ export function useNarrativeLoader({
           setStatus("idle");
           setIndex(0);
           setBackendMessage(null);
+          setTimelineReady(true);
+          randomStepsRef.current = 0;
           visibleSinceRef.current = null;
         }, doneDuration);
       }, remainingVisible);
@@ -124,11 +133,13 @@ export function useNarrativeLoader({
       setStatus("idle");
       setIndex(0);
       setBackendMessage(null);
+      setTimelineReady(true);
+      randomStepsRef.current = 0;
       visibleSinceRef.current = null;
     }, remainingVisible);
 
     return () => window.clearTimeout(timer);
-  }, [loading, error, delay, minVisibleDuration, doneMessage, doneDuration, isVisible]);
+  }, [loading, error, delay, minVisibleDuration, doneMessage, doneDuration, isVisible, sortedTimeline]);
 
   useEffect(() => {
     if (!isVisible || status !== "loading" || source || sortedTimeline) return;
@@ -138,7 +149,16 @@ export function useNarrativeLoader({
 
     const timer = window.setTimeout(() => {
       setIndex((current) => {
-        if (randomize) return getRandomNextIndex(current, activeMessages.length);
+        if (randomize) {
+          if (!loop) {
+            const maxSteps = Math.max(0, activeMessages.length - 1);
+            if (randomStepsRef.current >= maxSteps) return current;
+            randomStepsRef.current += 1;
+          }
+
+          return getRandomNextIndex(current, activeMessages.length);
+        }
+
         const next = current + 1;
         if (next >= activeMessages.length) return loop ? 0 : current;
         return next;
@@ -154,6 +174,7 @@ export function useNarrativeLoader({
     const startedAt = Date.now();
     const timers = sortedTimeline.map((item, itemIndex) =>
       window.setTimeout(() => {
+        if (itemIndex === 0) setTimelineReady(true);
         setIndex(itemIndex);
       }, Math.max(0, item.after - (Date.now() - startedAt)))
     );
@@ -220,7 +241,10 @@ export function useNarrativeLoader({
   }, [isVisible, status, source, interval, pollInterval]);
 
   const errorText = getErrorText(error);
-  const current = sortedTimeline?.[index]?.message ?? activeMessages[index] ?? FALLBACK_MESSAGE;
+  const current =
+    sortedTimeline && !timelineReady
+      ? FALLBACK_MESSAGE
+      : sortedTimeline?.[index]?.message ?? activeMessages[index] ?? FALLBACK_MESSAGE;
   const done = doneMessage ? normalizeMessage(doneMessage) : null;
   const errorMsg = normalizeMessage(errorText ? { text: errorText, emoji: "⚠️", animation: "fade", emojiAnimation: "bounce" } : errorMessage);
   const displayed = status === "done" && done ? done : status === "error" ? errorMsg : current;
