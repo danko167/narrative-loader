@@ -1,0 +1,126 @@
+.nl-root {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 1.5rem;
+}
+
+.nl-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.95rem;
+  line-height: 1.4;
+  color: inherit;
+  white-space: nowrap;
+}
+
+.nl-message {
+  display: inline-block;
+}
+
+.nl-status-error .nl-line {
+  color: #c92a2a;
+}
+
+.nl-status-done .nl-line {
+  color: #2b8a3e;
+}
+
+.nl-fade {
+  animation: nlFade 240ms ease-in-out;
+}
+
+.nl-typewriter,
+.nl-dots,
+.nl-none {
+  animation: none;
+}
+
+.nl-emoji {
+  display: inline-block;
+  transform-origin: center;
+  will-change: transform;
+}
+
+.nl-emoji-none {
+  animation: none;
+}
+
+.nl-emoji-pulse {
+  animation: nlEmojiPulse 1.2s ease-in-out infinite;
+}
+
+.nl-emoji-spin {
+  animation: nlEmojiSpin 1.4s linear infinite;
+}
+
+.nl-emoji-flip {
+  animation: nlEmojiFlip 1.6s ease-in-out infinite;
+}
+
+.nl-emoji-bounce {
+  animation: nlEmojiBounce 1s ease-in-out infinite;
+}
+
+@keyframes nlFade {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes nlEmojiPulse {
+  0%, 100% {
+    transform: scale(0.95);
+  }
+
+  50% {
+    transform: scale(1.12);
+  }
+}
+
+@keyframes nlEmojiSpin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes nlEmojiFlip {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+
+  50% {
+    transform: rotate(180deg);
+  }
+}
+
+@keyframes nlEmojiBounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-0.25rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nl-fade,
+  .nl-emoji-pulse,
+  .nl-emoji-spin,
+  .nl-emoji-flip,
+  .nl-emoji-bounce {
+    animation: none !important;
+  }
+}

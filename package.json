@@ -1,0 +1,87 @@
+{
+  "name": "@danko167/narrative-loader",
+  "version": "1.0.0",
+  "description": "Human-friendly async feedback for React apps with narrative loading states, tones, animations, emojis, timelines, and backend polling.",
+  "type": "module",
+
+  "author": "danko167",
+
+  "license": "MIT",
+
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/danko167/narrative-loader.git"
+  },
+  "bugs": {
+    "url": "https://github.com/danko167/narrative-loader/issues"
+  },
+  "homepage": "https://github.com/danko167/narrative-loader#readme",
+
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./styles.css": "./dist/NarrativeLoader.css"
+  },
+
+  "sideEffects": [
+    "*.css"
+  ],
+
+  "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs --dts --external react && node scripts/copy-css.mjs",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "prepublishOnly": "npm run test:run && npm run build",
+    "pack:check": "npm pack --dry-run"
+  },
+
+  "keywords": [
+    "react",
+    "loader",
+    "loading",
+    "async",
+    "ux",
+    "ui",
+    "status",
+    "progress",
+    "animation",
+    "narrative",
+    "thinking",
+    "thinking-loader",
+    "narrative-loader",
+    "llm",
+    "chat",
+    "feedback",
+    "frontend",
+    "typescript"
+  ],
+
+  "peerDependencies": {
+    "react": ">=18"
+  },
+
+  "devDependencies": {
+    "@testing-library/jest-dom": "latest",
+    "@testing-library/react": "latest",
+    "@types/react": "latest",
+    "@types/react-dom": "latest",
+    "jsdom": "latest",
+    "tsup": "latest",
+    "typescript": "latest",
+    "vitest": "latest"
+  }
+}
