@@ -12,6 +12,7 @@ import {
   isValidErrorValue,
   normalizeMessage,
   normalizeTimelineItem,
+  parseSourceResponse,
   resolveSourceMessage,
 } from "./utils";
 
@@ -245,7 +246,7 @@ export function useNarrativeLoader({
         });
         if (!response.ok) throw new Error(`Status request failed with ${response.status}`);
 
-        const data = await response.json();
+        const data = await parseSourceResponse(response);
         onStatusChangeRef.current?.(data);
 
         const message = resolveSourceMessage(data, getMessageRef.current);

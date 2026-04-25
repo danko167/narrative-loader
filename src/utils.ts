@@ -57,6 +57,11 @@ export function resolveSourceMessage(
 
   if (customMessage) return customMessage;
 
+  if (typeof data === "string") {
+    const fallbackMessage = data.trim();
+    if (fallbackMessage) return fallbackMessage;
+  }
+
   if (
     typeof data === "object" &&
     data !== null &&
@@ -68,6 +73,57 @@ export function resolveSourceMessage(
   }
 
   return "Working on it";
+}
+
+export async function parseSourceResponse(response: Response): Promise<unknown> {
+  const status = typeof response.status === "number" ? response.status : undefined;
+  if (status === 204 || status === 205) return null;
+
+  const contentType = response.headers?.get("content-type")?.toLowerCase() ?? "";
+  const looksJson = contentType.includes("application/json") || contentType.includes("+json");
+  const hasJson = typeof response.json === "function";
+  const hasText = typeof response.text === "function";
+  const tryJsonFirst = looksJson || (hasJson && !hasText);
+
+  const parseJson = async () => {
+    if (!hasJson) throw new Error("No json parser");
+    return response.json();
+  };
+
+  const parseText = async () => {
+    if (!hasText) throw new Error("No text parser");
+    const rawText = await response.text();
+    const trimmedText = rawText.trim();
+    if (!trimmedText) return null;
+
+    try {
+      return JSON.parse(trimmedText);
+    } catch {
+      return trimmedText;
+    }
+  };
+
+  if (tryJsonFirst) {
+    try {
+      return await parseJson();
+    } catch {
+      try {
+        return await parseText();
+      } catch {
+        return null;
+      }
+    }
+  }
+
+  try {
+    return await parseText();
+  } catch {
+    try {
+      return await parseJson();
+    } catch {
+      return null;
+    }
+  }
 }
 
 export function getRandomNextIndex(current: number, length: number) {

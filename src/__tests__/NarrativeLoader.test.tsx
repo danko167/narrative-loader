@@ -7,6 +7,7 @@ describe("NarrativeLoader", () => {
   afterEach(() => {
     vi.useRealTimers();
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
   it("renders nothing when not visible", () => {
@@ -30,14 +31,13 @@ describe("NarrativeLoader", () => {
       vi.runOnlyPendingTimers();
     });
 
-    expect(screen.getByText("Loading custom thing")).toBeInTheDocument();
+    expect(screen.getAllByText("Loading custom thing").length).toBeGreaterThan(0);
   });
 
   it("shows full text immediately when reduced motion is enabled", async () => {
     vi.useFakeTimers();
 
-    const originalMatchMedia = window.matchMedia;
-    window.matchMedia = vi.fn().mockImplementation(() => ({
+    vi.stubGlobal("matchMedia", vi.fn().mockImplementation(() => ({
       matches: true,
       media: "(prefers-reduced-motion: reduce)",
       onchange: null,
@@ -46,7 +46,7 @@ describe("NarrativeLoader", () => {
       addListener: vi.fn(),
       removeListener: vi.fn(),
       dispatchEvent: vi.fn(),
-    }));
+    })));
 
     render(
       <NarrativeLoader
@@ -60,9 +60,35 @@ describe("NarrativeLoader", () => {
       vi.runOnlyPendingTimers();
     });
 
-    expect(screen.getByText("Typing now")).toBeInTheDocument();
+    expect(screen.getAllByText("Typing now").length).toBeGreaterThan(0);
+  });
 
-    window.matchMedia = originalMatchMedia;
+  it("exposes stable status aria attributes while loading", async () => {
+    vi.useFakeTimers();
+
+    render(
+      <NarrativeLoader
+        loading
+        delay={0}
+        messages={[{ text: "Working", animation: "dots" }]}
+      />
+    );
+
+    await act(async () => {
+      vi.runOnlyPendingTimers();
+    });
+
+    const status = screen.getByRole("status");
+    expect(status).toHaveAttribute("aria-live", "polite");
+    expect(status).toHaveAttribute("aria-atomic", "true");
+    expect(status).toHaveAttribute("aria-busy", "true");
+  });
+
+  it("clears aria-busy in error state", async () => {
+    render(<NarrativeLoader loading={false} error="Boom" />);
+
+    const status = screen.getByRole("status");
+    expect(status).toHaveAttribute("aria-busy", "false");
   });
 
   it("keeps configured emojis visible during source-driven loading", async () => {
@@ -86,7 +112,7 @@ describe("NarrativeLoader", () => {
       vi.runOnlyPendingTimers();
     });
 
-    expect(screen.getByText("Fetching status")).toBeInTheDocument();
+    expect(screen.getAllByText("Fetching status").length).toBeGreaterThan(0);
     expect(screen.getByText("🔄")).toBeInTheDocument();
   });
 
@@ -107,7 +133,7 @@ describe("NarrativeLoader", () => {
       vi.runOnlyPendingTimers();
     });
 
-    expect(screen.getByText("Working")).toBeInTheDocument();
+    expect(screen.getAllByText("Working").length).toBeGreaterThan(0);
 
     rerender(
       <NarrativeLoader
@@ -123,7 +149,7 @@ describe("NarrativeLoader", () => {
       vi.advanceTimersByTime(0);
     });
 
-    expect(screen.getByText("Done")).toBeInTheDocument();
+    expect(screen.getAllByText("Done").length).toBeGreaterThan(0);
 
     await act(async () => {
       vi.advanceTimersByTime(1000);
@@ -141,7 +167,7 @@ describe("NarrativeLoader", () => {
       vi.runOnlyPendingTimers();
     });
 
-    expect(screen.getByText("Boom")).toBeInTheDocument();
+    expect(screen.getAllByText("Boom").length).toBeGreaterThan(0);
   });
 
   it("renders emoji at the configured position", async () => {
@@ -207,7 +233,7 @@ describe("NarrativeLoader", () => {
       await Promise.resolve();
     });
 
-    expect(screen.getByText(/Backend step/)).toBeInTheDocument();
+    expect(screen.getAllByText(/Backend step/).length).toBeGreaterThan(0);
   });
 
   it("uses custom typewriter timing", async () => {
@@ -236,6 +262,6 @@ describe("NarrativeLoader", () => {
       vi.advanceTimersByTime(30);
     });
 
-    expect(screen.getByText("Test")).toBeInTheDocument();
+    expect(screen.getAllByText("Test").length).toBeGreaterThan(0);
   });
 });

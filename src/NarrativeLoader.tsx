@@ -125,13 +125,16 @@ export function NarrativeLoader({
         ) : null}
 
         <span className="nl-message">
-          <RenderAnimatedText
-            text={loader.text}
-            animation={loader.animation}
-            prefersReducedMotion={prefersReducedMotion}
-            typewriterInterval={typewriterInterval}
-            dotsInterval={dotsInterval}
-          />
+          <span className="nl-sr-only">{loader.text}</span>
+          <span aria-hidden="true" className="nl-visual-message">
+            <RenderAnimatedText
+              text={loader.text}
+              animation={loader.animation}
+              prefersReducedMotion={prefersReducedMotion}
+              typewriterInterval={typewriterInterval}
+              dotsInterval={dotsInterval}
+            />
+          </span>
         </span>
 
         {showEmoji && emojiPosition === "end" ? (

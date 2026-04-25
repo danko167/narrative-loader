@@ -326,6 +326,66 @@ describe("useNarrativeLoader", () => {
     expect(result.current.text).toBe("Response message");
   });
 
+  it("accepts text/plain polling responses without treating them as failures", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue(
+      new Response("Plain status", {
+        status: 200,
+        headers: { "content-type": "text/plain" },
+      })
+    );
+
+    const { result } = renderHook(() =>
+      useNarrativeLoader({
+        loading: true,
+        source: "/api/status",
+      })
+    );
+
+    act(() => {
+      vi.runOnlyPendingTimers();
+    });
+
+    await act(async () => {
+      await flushMicrotasks();
+    });
+
+    expect(result.current.status).toBe("loading");
+    expect(result.current.text).toBe("Plain status");
+  });
+
+  it("keeps polling active when a successful response has an empty body", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue(
+      new Response(null, {
+        status: 204,
+      })
+    );
+
+    const { result } = renderHook(() =>
+      useNarrativeLoader({
+        loading: true,
+        source: "/api/status",
+      })
+    );
+
+    act(() => {
+      vi.runOnlyPendingTimers();
+    });
+
+    await act(async () => {
+      await flushMicrotasks();
+    });
+
+    expect(result.current.status).toBe("loading");
+    expect(result.current.text).toBe("Working on it");
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+
+    act(() => {
+      vi.advanceTimersByTime(1800);
+    });
+
+    expect(globalThis.fetch).toHaveBeenCalledTimes(2);
+  });
+
   it("keeps the returned message object in sync with backend polling text", async () => {
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,

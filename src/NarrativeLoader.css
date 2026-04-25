@@ -8,15 +8,35 @@
 .nl-line {
   display: inline-flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 0.35rem;
   font-size: 0.95rem;
   line-height: 1.4;
   color: inherit;
-  white-space: nowrap;
+  white-space: normal;
 }
 
 .nl-message {
   display: inline-block;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.nl-visual-message {
+  display: inline;
+}
+
+.nl-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .nl-status-error .nl-line {
