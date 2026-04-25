@@ -233,8 +233,8 @@ When `loading` changes from `true` to `false` and `doneMessage` is provided, the
   source="/api/jobs/123/status"
   pollInterval={1500}
   doneMessage="Summary ready"
-  getMessage={(data) => data.step}
-  stopWhen={(data) => data.done === true}
+  getMessage={(data) => (data as { step?: string }).step}
+  stopWhen={(data) => (data as { done?: boolean }).done === true}
 />
 ```
 
@@ -263,6 +263,7 @@ and then to the default text.
 - `getMessage` maps the response into the displayed loader text.
 - Until the first polling response arrives, the loader keeps showing your configured preset, custom message, or timeline text.
 - `stopWhen` completes the loader cycle once your job is complete. Pair it with `doneMessage` if you want a final success message before the loader hides.
+- After a source-driven cycle completes, the loader stays idle for that same `source` until you either set `loading={false}` or provide a new `source` value.
 - Polling request failures switch the loader into `error` state with the request error text.
 - Polling is sequential: a new request is only scheduled after the previous request settles.
 - Retries and backoff are left to the consumer so backend failures are not hidden automatically.
@@ -274,15 +275,35 @@ and then to the default text.
 ```tsx
 import { useNarrativeLoader } from "@danko167/narrative-loader";
 
-const loader = useNarrativeLoader({ loading });
+const loader = useNarrativeLoader({
+  loading,
+  source: "/api/jobs/123/status",
+  stopWhen: (data) => (data as { done?: boolean }).done === true,
+});
 
 return loader.visible ? (
   <div aria-live="polite" aria-busy={loader.status === "loading"}>
     <strong>{loader.status}</strong>
     <span>{loader.text}</span>
+    <small>{loader.message.emoji}</small>
   </div>
 ) : null;
 ```
+
+`loader.text` is the current display string. `loader.message` carries the same text plus any emoji or animation metadata for custom headless rendering.
+
+## Hook result API
+
+`useNarrativeLoader` returns an object with these fields:
+
+- `visible`: `true` when the loader should be rendered.
+- `status`: One of `"idle" | "loading" | "done" | "error"`.
+- `text`: The current display string, including backend polling text when `source` is active.
+- `message`: The normalized message object for the current step, including `text`, `emoji`, and any message-level animation metadata.
+- `animation`: The text animation that should be rendered for the current step.
+- `emojiAnimation`: The emoji animation that should be rendered for the current step.
+- `index`: The current message or timeline index.
+- `isSourceMessage`: `true` while the displayed text is being driven by `source` polling.
 
 ---
 

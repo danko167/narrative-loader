@@ -59,12 +59,34 @@ export function useNarrativeLoader({
   const getMessageRef = useRef(getMessage);
   const onStatusChangeRef = useRef(onStatusChange);
   const stopWhenRef = useRef(stopWhen);
+  const sourceRef = useRef(source);
+
+  function resetLoaderState({ preserveSourceDone = false }: { preserveSourceDone?: boolean } = {}) {
+    setIndex(0);
+    setBackendMessage(null);
+    setSourceDone((current) => (preserveSourceDone ? current : false));
+    setSourceError(null);
+    setTimelineReady(true);
+    randomStepsRef.current = 0;
+    visibleSinceRef.current = null;
+  }
 
   useEffect(() => {
     getMessageRef.current = getMessage;
     onStatusChangeRef.current = onStatusChange;
     stopWhenRef.current = stopWhen;
   }, [getMessage, onStatusChange, stopWhen]);
+
+  useEffect(() => {
+    if (sourceRef.current === source) return;
+
+    sourceRef.current = source;
+    setSourceDone(false);
+    setSourceError(null);
+    setBackendMessage(null);
+    setIndex(0);
+    setTimelineReady(true);
+  }, [source]);
 
   const activeMessages = useMemo<NormalizedMessage[]>(() => {
     const selected = messages?.length ? messages : tonePresets[tone]?.[variant] ?? tonePresets.neutral.default;
@@ -114,13 +136,7 @@ export function useNarrativeLoader({
       }
 
       setStatus("idle");
-      setIndex(0);
-      setBackendMessage(null);
-      setSourceDone(false);
-      setSourceError(null);
-      setTimelineReady(true);
-      randomStepsRef.current = 0;
-      visibleSinceRef.current = null;
+      resetLoaderState();
       return;
     }
 
@@ -135,12 +151,7 @@ export function useNarrativeLoader({
         hideTimer = window.setTimeout(() => {
           setIsVisible(false);
           setStatus("idle");
-          setIndex(0);
-          setBackendMessage(null);
-          setSourceError(null);
-          setTimelineReady(true);
-          randomStepsRef.current = 0;
-          visibleSinceRef.current = null;
+          resetLoaderState({ preserveSourceDone: true });
         }, doneDuration);
       }, remainingVisible);
 
@@ -153,12 +164,7 @@ export function useNarrativeLoader({
     const timer = window.setTimeout(() => {
       setIsVisible(false);
       setStatus("idle");
-      setIndex(0);
-      setBackendMessage(null);
-      setSourceError(null);
-      setTimelineReady(true);
-      randomStepsRef.current = 0;
-      visibleSinceRef.current = null;
+      resetLoaderState({ preserveSourceDone: true });
     }, remainingVisible);
 
     return () => window.clearTimeout(timer);
@@ -285,12 +291,13 @@ export function useNarrativeLoader({
   const done = doneMessage ? normalizeMessage(doneMessage) : null;
   const errorMsg = normalizeMessage(errorText ? { text: errorText, emoji: "⚠️", animation: "fade", emojiAnimation: "bounce" } : errorMessage);
   const sourceDoneMessage = backendMessage ? { ...current, text: backendMessage } : current;
+  const sourceLoadingMessage = backendMessage ? { ...current, text: backendMessage } : current;
   const displayed =
     status === "done"
       ? done ?? sourceDoneMessage
       : status === "error"
         ? errorMsg
-        : current;
+        : sourceLoadingMessage;
   const isSourceMessage = Boolean(source && status === "loading");
   const text = isSourceMessage ? backendMessage ?? displayed.text : displayed.text;
 

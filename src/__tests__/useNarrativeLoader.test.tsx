@@ -326,6 +326,93 @@ describe("useNarrativeLoader", () => {
     expect(result.current.text).toBe("Response message");
   });
 
+  it("keeps the returned message object in sync with backend polling text", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ message: "Backend step" }),
+    } as Response);
+
+    const { result } = renderHook(() =>
+      useNarrativeLoader({
+        loading: true,
+        source: "/api/status",
+        messages: [{ text: "Queued", emoji: "🔄" }],
+      })
+    );
+
+    act(() => {
+      vi.runOnlyPendingTimers();
+    });
+
+    await act(async () => {
+      await flushMicrotasks();
+    });
+
+    expect(result.current.text).toBe("Backend step");
+    expect(result.current.message.text).toBe("Backend step");
+    expect(result.current.message.emoji).toBe("🔄");
+  });
+
+  it("can restart polling after a source-driven completion without toggling loading off first", async () => {
+    const responses = [
+      { done: true, message: "First complete" },
+      { done: false, message: "Second run" },
+    ];
+
+    globalThis.fetch = vi.fn().mockImplementation(() =>
+      Promise.resolve({
+        ok: true,
+        json: async () => responses.shift() ?? { done: false, message: "Fallback" },
+      } as Response)
+    );
+
+    const { result, rerender } = renderHook(
+      ({ source }) =>
+        useNarrativeLoader({
+          loading: true,
+          source,
+          stopWhen: (data) => Boolean((data as { done?: boolean }).done),
+        }),
+      {
+        initialProps: { source: "/api/status/1" },
+      }
+    );
+
+    act(() => {
+      vi.runOnlyPendingTimers();
+    });
+
+    await act(async () => {
+      await flushMicrotasks();
+    });
+
+    expect(result.current.status).toBe("done");
+    expect(result.current.text).toBe("First complete");
+
+    await act(async () => {
+      vi.advanceTimersByTime(0);
+      await flushMicrotasks();
+    });
+
+    expect(result.current.visible).toBe(false);
+    expect(result.current.status).toBe("idle");
+
+    rerender({ source: "/api/status/2" });
+
+    act(() => {
+      vi.runOnlyPendingTimers();
+    });
+
+    await act(async () => {
+      await flushMicrotasks();
+    });
+
+    expect(globalThis.fetch).toHaveBeenCalledTimes(2);
+    expect(result.current.status).toBe("loading");
+    expect(result.current.text).toBe("Second run");
+    expect(result.current.message.text).toBe("Second run");
+  });
+
   it("uses configured loader text before the first polling response arrives", () => {
     globalThis.fetch = vi.fn().mockImplementation(
       () => new Promise<Response>(() => undefined)
