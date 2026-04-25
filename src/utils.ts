@@ -81,8 +81,10 @@ export async function parseSourceResponse(response: Response): Promise<unknown> 
 
   const contentType = response.headers?.get("content-type")?.toLowerCase() ?? "";
   const looksJson = contentType.includes("application/json") || contentType.includes("+json");
-  const jsonCandidate = typeof response.clone === "function" ? response.clone() : response;
-  const textCandidate = typeof response.clone === "function" ? response.clone() : response;
+  const hasJson = typeof response.json === "function";
+  const hasText = typeof response.text === "function";
+  const tryJsonFirst = looksJson || (hasJson && !hasText);
+  const fallbackCandidate = typeof response.clone === "function" ? response.clone() : null;
 
   const parseText = async (candidate: Response) => {
     const rawText = await candidate.text();
@@ -96,12 +98,15 @@ export async function parseSourceResponse(response: Response): Promise<unknown> 
     }
   };
 
-  if (looksJson) {
+  if (tryJsonFirst) {
     try {
-      return await jsonCandidate.json();
+      return await response.json();
     } catch {
+      if (!hasText) return null;
+      if (!fallbackCandidate) return null;
+
       try {
-        return await parseText(textCandidate);
+        return await parseText(fallbackCandidate);
       } catch {
         return null;
       }
@@ -109,10 +114,20 @@ export async function parseSourceResponse(response: Response): Promise<unknown> 
   }
 
   try {
-    return await parseText(textCandidate);
+    return await parseText(response);
   } catch {
+    if (hasJson && !fallbackCandidate) {
+      try {
+        return await response.json();
+      } catch {
+        return null;
+      }
+    }
+
+    if (!fallbackCandidate) return null;
+
     try {
-      return await jsonCandidate.json();
+      return await fallbackCandidate.json();
     } catch {
       return null;
     }

@@ -161,6 +161,27 @@ describe("useNarrativeLoader", () => {
     expect(result.current.text).toBe("Request failed");
   });
 
+  it("preserves custom error styling when runtime error text is provided", () => {
+    const { result } = renderHook(() =>
+      useNarrativeLoader({
+        loading: false,
+        error: "Request failed",
+        errorMessage: {
+          text: "Custom fallback",
+          emoji: "🚫",
+          animation: "none",
+          emojiAnimation: "spin",
+        },
+      })
+    );
+
+    expect(result.current.status).toBe("error");
+    expect(result.current.text).toBe("Request failed");
+    expect(result.current.message.emoji).toBe("🚫");
+    expect(result.current.animation).toBe("none");
+    expect(result.current.emojiAnimation).toBe("spin");
+  });
+
   it("ignores invalid runtime error values", () => {
     const { result } = renderHook(() =>
       useNarrativeLoader({

@@ -307,7 +307,10 @@ export function useNarrativeLoader({
       ? FALLBACK_MESSAGE
       : sortedTimeline?.[index]?.message ?? activeMessages[index] ?? FALLBACK_MESSAGE;
   const done = doneMessage ? normalizeMessage(doneMessage) : null;
-  const errorMsg = normalizeMessage(errorText ? { text: errorText, emoji: "⚠️", animation: "fade", emojiAnimation: "bounce" } : errorMessage);
+  const normalizedErrorMessage = normalizeMessage(errorMessage);
+  const errorMsg = errorText
+    ? { ...normalizedErrorMessage, text: errorText }
+    : normalizedErrorMessage;
   const sourceMessage = backendMessage ? { ...current, text: backendMessage } : current;
   const displayed =
     status === "done"
