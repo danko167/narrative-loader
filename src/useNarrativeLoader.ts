@@ -106,7 +106,14 @@ export function useNarrativeLoader({
   }, [messages, timeline]);
 
   useEffect(() => {
-    const hasError = isValidErrorValue(error) || Boolean(sourceError);
+    const hasRuntimeError = isValidErrorValue(error);
+    const hasSourceError = Boolean(sourceError);
+
+    if (!loading && hasSourceError) {
+      setSourceError(null);
+    }
+
+    const hasError = hasRuntimeError || (hasSourceError && loading);
     const isActivelyLoading = loading && !sourceDone;
 
     if (hasError) {
@@ -301,14 +308,13 @@ export function useNarrativeLoader({
       : sortedTimeline?.[index]?.message ?? activeMessages[index] ?? FALLBACK_MESSAGE;
   const done = doneMessage ? normalizeMessage(doneMessage) : null;
   const errorMsg = normalizeMessage(errorText ? { text: errorText, emoji: "⚠️", animation: "fade", emojiAnimation: "bounce" } : errorMessage);
-  const sourceDoneMessage = backendMessage ? { ...current, text: backendMessage } : current;
-  const sourceLoadingMessage = backendMessage ? { ...current, text: backendMessage } : current;
+  const sourceMessage = backendMessage ? { ...current, text: backendMessage } : current;
   const displayed =
     status === "done"
-      ? done ?? sourceDoneMessage
+      ? done ?? sourceMessage
       : status === "error"
         ? errorMsg
-        : sourceLoadingMessage;
+        : sourceMessage;
   const isSourceMessage = Boolean(source && status === "loading");
   const text = isSourceMessage ? backendMessage ?? displayed.text : displayed.text;
 

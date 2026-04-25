@@ -301,6 +301,47 @@ describe("useNarrativeLoader", () => {
     expect(globalThis.fetch).toHaveBeenCalledTimes(1);
   });
 
+  it("clears source polling errors when loading is turned off", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 503,
+      json: async () => ({}),
+    } as Response);
+
+    const { result, rerender } = renderHook(
+      ({ loading }) =>
+        useNarrativeLoader({
+          loading,
+          source: "/api/status",
+          pollInterval: 100,
+        }),
+      {
+        initialProps: { loading: true },
+      }
+    );
+
+    act(() => {
+      vi.runOnlyPendingTimers();
+    });
+
+    await act(async () => {
+      await flushMicrotasks();
+    });
+
+    expect(result.current.status).toBe("error");
+    expect(result.current.visible).toBe(true);
+
+    rerender({ loading: false });
+
+    await act(async () => {
+      vi.runOnlyPendingTimers();
+      await flushMicrotasks();
+    });
+
+    expect(result.current.status).toBe("idle");
+    expect(result.current.visible).toBe(false);
+  });
+
   it("falls back to response.message when getMessage returns an empty value", async () => {
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
