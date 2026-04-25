@@ -81,18 +81,11 @@ export async function parseSourceResponse(response: Response): Promise<unknown> 
 
   const contentType = response.headers?.get("content-type")?.toLowerCase() ?? "";
   const looksJson = contentType.includes("application/json") || contentType.includes("+json");
-  const hasJson = typeof response.json === "function";
-  const hasText = typeof response.text === "function";
-  const tryJsonFirst = looksJson || (hasJson && !hasText);
+  const jsonCandidate = typeof response.clone === "function" ? response.clone() : response;
+  const textCandidate = typeof response.clone === "function" ? response.clone() : response;
 
-  const parseJson = async () => {
-    if (!hasJson) throw new Error("No json parser");
-    return response.json();
-  };
-
-  const parseText = async () => {
-    if (!hasText) throw new Error("No text parser");
-    const rawText = await response.text();
+  const parseText = async (candidate: Response) => {
+    const rawText = await candidate.text();
     const trimmedText = rawText.trim();
     if (!trimmedText) return null;
 
@@ -103,12 +96,12 @@ export async function parseSourceResponse(response: Response): Promise<unknown> 
     }
   };
 
-  if (tryJsonFirst) {
+  if (looksJson) {
     try {
-      return await parseJson();
+      return await jsonCandidate.json();
     } catch {
       try {
-        return await parseText();
+        return await parseText(textCandidate);
       } catch {
         return null;
       }
@@ -116,10 +109,10 @@ export async function parseSourceResponse(response: Response): Promise<unknown> 
   }
 
   try {
-    return await parseText();
+    return await parseText(textCandidate);
   } catch {
     try {
-      return await parseJson();
+      return await jsonCandidate.json();
     } catch {
       return null;
     }

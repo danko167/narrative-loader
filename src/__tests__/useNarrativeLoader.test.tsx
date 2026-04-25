@@ -379,8 +379,9 @@ describe("useNarrativeLoader", () => {
     expect(result.current.text).toBe("Working on it");
     expect(globalThis.fetch).toHaveBeenCalledTimes(1);
 
-    act(() => {
+    await act(async () => {
       vi.advanceTimersByTime(1800);
+      await flushMicrotasks();
     });
 
     expect(globalThis.fetch).toHaveBeenCalledTimes(2);
